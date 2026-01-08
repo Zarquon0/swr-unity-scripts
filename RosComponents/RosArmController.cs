@@ -24,6 +24,8 @@ public class RosArmController : MonoBehaviour
 
     void Start()
     {
+        // Sometimes, Unity can be finicky...
+        if (currentTargets == null || currentTargets.Length != 7) { currentTargets = new float[7]; }
         // Subscribe to ROS
         ROSConnection ros = ROSConnection.GetOrCreateInstance();
         ros.Subscribe<Float64MultiArrayMsg>(topicName, OnRosMessageReceived);
