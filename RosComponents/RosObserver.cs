@@ -14,7 +14,7 @@ public class RosObserver : MonoBehaviour
     public ConfigurableJoint shoulderJoint;
     public HingeJoint elbowJoint;
     public ConfigurableJoint wristJoint;
-    public Transform cubeTrans;
+    public GameObject cubeTarget;
 
     [Header("Other Settings")]
     public float publishFrequency = 0.1f;
@@ -23,9 +23,12 @@ public class RosObserver : MonoBehaviour
     private ROSConnection ros;
     private float timeElapsed = 0f;
 
-    // Cached Rigidbody objects to save compute
+    // Cached properties to save compute
     private Rigidbody shoulderRb;
     private Rigidbody wristRb;
+    private Transform cubeTrans;
+    private RegisterHit cubeHit;
+
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -33,9 +36,11 @@ public class RosObserver : MonoBehaviour
         // Establish ros connection and register publisher
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<DuelBotObservationMsg>(topicName);
-        // Cache arm rigid body objects
+        // Cache properties
         shoulderRb = shoulderJoint.GetComponent<Rigidbody>();
         wristRb = wristJoint.GetComponent<Rigidbody>();
+        cubeTrans = cubeTarget.GetComponent<Transform>();
+        cubeHit = cubeTarget.GetComponent<RegisterHit>();
     }
 
     void Update()
@@ -60,7 +65,9 @@ public class RosObserver : MonoBehaviour
         msg.shoulder_vel = shoulderRb.angularVelocity.To<FLU>();
         msg.elbow_vel = elbowJoint.velocity;
         msg.wrist_vel = wristRb.angularVelocity.To<FLU>();
+        msg.hit_target = cubeHit.hit;
 
+        //Debug.Log("Sending Message");
         ros.Publish(topicName, msg);
     }
 }
