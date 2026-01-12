@@ -8,12 +8,19 @@ public class TrainingReset : MonoBehaviour
     [Header("ROS Settings")]
     public string serviceName = "duel_bot/reset";
 
-    [Header("Target Settings")]
+    [Header("Target/Respawn Settings")]
     public GameObject target;
-    public float spawnRadius = 1.5f;
+    public float maxSpawnRadius = 1.5f;
+    public float initSpawnRadius = 0.01f;
+    public int spawnsAtSameDist = 1;
+    public int numDistsAnchoredByTip = 25;
+    public float distIncr = 0.03f;
+    public int numPrevHits = 0; 
 
     [Header("Robot Arm Parts")]
     public GameObject armRoot;
+    public Transform swordTrans;
+    public float bladeLength = 0.7f;
 
     // Cached object properties
     private ROSConnection ros;
@@ -49,7 +56,16 @@ public class TrainingReset : MonoBehaviour
         ros.ImplementService<TriggerRequest, TriggerResponse>(serviceName, Reset);
     }
 
+    void Update() {
+        Vector3 tipPos = swordTrans.TransformPoint(new Vector3(0, 0, -bladeLength));
+        
+        // Draw a red line from the handle to the calculated tip
+        // Visible in the 'Scene' tab while the game is running
+        Debug.DrawLine(swordTrans.position, tipPos, Color.red);
+    }
+
     private TriggerResponse Reset(TriggerRequest req) {
+        if (targetRh.hit) { numPrevHits++; }
         ResetRobot();
         RespawnTarget();
         return new TriggerResponse { success = true };
@@ -75,7 +91,17 @@ public class TrainingReset : MonoBehaviour
     void RespawnTarget() {
         // Determine new target position first in spherical, then convert to cartesian
         Vector3 randDir = Random.onUnitSphere;
-        Vector3 spawnPos = armRoot.transform.position + randDir*spawnRadius;
+        Vector3 anchorPoint;
+        float spawnRadius;
+        if (numPrevHits < numDistsAnchoredByTip * spawnsAtSameDist) {
+            spawnRadius = (numPrevHits / spawnsAtSameDist)*distIncr + initSpawnRadius;
+            anchorPoint = swordTrans.TransformPoint(new Vector3(0, 0, -bladeLength));
+        } else {
+            spawnRadius = (numPrevHits / spawnsAtSameDist)*distIncr + initSpawnRadius;
+            if (spawnRadius > maxSpawnRadius) { spawnRadius = maxSpawnRadius; }
+            anchorPoint = armRoot.transform.position;
+        }
+        Vector3 spawnPos = anchorPoint + randDir*spawnRadius;
         // Move target to position and reset all its state
         target.transform.position = spawnPos;
         target.transform.rotation = Quaternion.identity;
