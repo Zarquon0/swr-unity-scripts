@@ -20,7 +20,7 @@ public class TrainingReset : MonoBehaviour
     [Header("Robot Arm Parts")]
     public GameObject armRoot;
     public Transform swordTrans;
-    public float bladeLength = 0.7f;
+    public float bladeLength = 0.7f; //NOTE: If this is editted during runtime, nothing will change (initial value cached)
 
     // Cached object properties
     private ROSConnection ros;
@@ -56,14 +56,6 @@ public class TrainingReset : MonoBehaviour
         ros.ImplementService<TriggerRequest, TriggerResponse>(serviceName, Reset);
     }
 
-    void Update() {
-        Vector3 tipPos = swordTrans.TransformPoint(new Vector3(0, 0, -bladeLength));
-        
-        // Draw a red line from the handle to the calculated tip
-        // Visible in the 'Scene' tab while the game is running
-        Debug.DrawLine(swordTrans.position, tipPos, Color.red);
-    }
-
     private TriggerResponse Reset(TriggerRequest req) {
         if (targetRh.hit) { numPrevHits++; }
         ResetRobot();
@@ -95,7 +87,7 @@ public class TrainingReset : MonoBehaviour
         float spawnRadius;
         if (numPrevHits < numDistsAnchoredByTip * spawnsAtSameDist) {
             spawnRadius = (numPrevHits / spawnsAtSameDist)*distIncr + initSpawnRadius;
-            anchorPoint = swordTrans.TransformPoint(new Vector3(0, 0, -bladeLength));
+            anchorPoint = swordTrans.TransformPoint(new Vector3(0, bladeLength, 0));
         } else {
             spawnRadius = (numPrevHits / spawnsAtSameDist)*distIncr + initSpawnRadius;
             if (spawnRadius > maxSpawnRadius) { spawnRadius = maxSpawnRadius; }
