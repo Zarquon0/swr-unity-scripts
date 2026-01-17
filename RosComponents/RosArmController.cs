@@ -53,6 +53,7 @@ public class RosArmController : MonoBehaviour
         
         // Apply to Configurable Joint (Remember: TargetRotation is usually Inverted logic)
         shoulderJoint.targetRotation *= Quaternion.Inverse(shoulderRot);
+        //shoulderJoint.targetRotation = Quaternion.Inverse(shoulderRot);
 
 
         // --- ELBOW (Index 3) ---
@@ -60,6 +61,7 @@ public class RosArmController : MonoBehaviour
         float elbowAngle = currentTargets[3];
         JointSpring spr = elbowJoint.spring;
         spr.targetPosition += elbowAngle;
+        //spr.targetPosition = elbowAngle;
         elbowJoint.spring = spr;
 
 
@@ -70,5 +72,6 @@ public class RosArmController : MonoBehaviour
         Quaternion wristRot = Quaternion.Euler(wX, wY, wZ);
 
         wristJoint.targetRotation *= Quaternion.Inverse(wristRot);
+        //wristJoint.targetRotation = Quaternion.Inverse(wristRot);
     }
 }
