@@ -21,6 +21,7 @@ public class TrainingReset : MonoBehaviour
     public GameObject armRoot;
     public Transform swordTrans;
     public float bladeLength = 0.7f; 
+    public float rotLimit = 180f;
 
     // Cached object properties
     private ROSConnection ros;
@@ -94,21 +95,28 @@ public class TrainingReset : MonoBehaviour
 
         // 2. Reset Position AND Joint Targets
         foreach (var bs in armInitialStates) {
-            // Reset Transform
-            bs.rb.transform.localPosition = bs.startLocalPos;
-            bs.rb.transform.localRotation = bs.startLocalRot;
-
+            // Reset Local Position
+            bs.rb.transform.localPosition = bs.startLocalPos; // Should never be randomized
             // Reset Configurable Joint Target
             if (bs.configJoint != null) {
-                bs.configJoint.targetRotation = bs.startTargetRot;
-            }
-
-            // Reset Hinge Joint Spring Target
-            // Note: HingeJoint requires re-assigning the struct
-            if (bs.hingeJoint != null) {
+                // Generate random offset from starting position
+                float xNoise = Random.Range(-rotLimit, rotLimit);
+                float yNoise = Random.Range(-rotLimit, rotLimit);
+                float zNoise = Random.Range(-rotLimit, rotLimit);
+                Quaternion randRot = Quaternion.Euler(xNoise, yNoise, zNoise);
+                // Apply offset
+                bs.rb.transform.localRotation = bs.startLocalRot * randRot;
+                bs.configJoint.targetRotation = bs.startTargetRot * randRot;
+            } else if (bs.hingeJoint != null) {
+                // Random rotational offset
+                float xNoise = Random.Range(-rotLimit, rotLimit);
+                // Apply offset
+                bs.rb.transform.localRotation = bs.startLocalRot * Quaternion.Euler(xNoise, 0, 0);
                 JointSpring spring = bs.hingeJoint.spring;
-                spring.targetPosition = bs.startHingeTarget;
+                spring.targetPosition = bs.startHingeTarget + xNoise;
                 bs.hingeJoint.spring = spring;
+            } else { // Target not a joint - this is the base
+                bs.rb.transform.localRotation = bs.startLocalRot;
             }
         }
 
@@ -120,6 +128,14 @@ public class TrainingReset : MonoBehaviour
                 bs.rb.angularVelocity = Vector3.zero;
             }
         }
+    }
+
+    private Quaternion RandQuaternion(float rotLimit) {
+        float xNoise = Random.Range(-rotLimit, rotLimit);
+        float yNoise = Random.Range(-rotLimit, rotLimit);
+        float zNoise = Random.Range(-rotLimit, rotLimit);
+        Quaternion randRot = Quaternion.Euler(xNoise, yNoise, zNoise);
+        return randRot;
     }
 
     void RespawnTarget() {
@@ -136,6 +152,11 @@ public class TrainingReset : MonoBehaviour
             anchorPoint = armRoot.transform.position;
         }
         Vector3 spawnPos = anchorPoint + randDir*spawnRadius;
+        // Prevent the cube from spawning out of the reach of the arm
+        if (Vector3.Distance(armRoot.transform.position, spawnPos) > maxSpawnRadius) {
+            Vector3 dirFromRoot = (spawnPos - armRoot.transform.position).normalized;
+            spawnPos = armRoot.transform.position + (dirFromRoot * maxSpawnRadius);
+        }
         // Move target to position and reset all its state
         target.transform.position = spawnPos;
         target.transform.rotation = Quaternion.identity;
